@@ -13,6 +13,7 @@ import com.google.api.client.json.gson.GsonFactory;
 import com.google.api.client.util.store.FileDataStoreFactory;
 import com.google.api.services.sheets.v4.Sheets;
 import com.google.api.services.sheets.v4.SheetsScopes;
+import com.google.api.services.sheets.v4.model.UpdateValuesResponse;
 import com.google.api.services.sheets.v4.model.ValueRange;
 
 import java.io.FileNotFoundException;
@@ -20,6 +21,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.security.GeneralSecurityException;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
@@ -32,7 +34,7 @@ public class Sheet {
      * Global instance of the scopes required by this quickstart.
      * If modifying these scopes, delete your previously saved tokens/ folder.
      */
-    private static final List<String> SCOPES = Collections.singletonList(SheetsScopes.SPREADSHEETS_READONLY);
+    private static final List<String> SCOPES = Collections.singletonList(SheetsScopes.SPREADSHEETS);
     private static final String CREDENTIALS_FILE_PATH = "/google-credentials.json";
 
     /**
@@ -67,10 +69,27 @@ public class Sheet {
         // Build a new authorized API client service.
         final NetHttpTransport HTTP_TRANSPORT = GoogleNetHttpTransport.newTrustedTransport();
         final String spreadsheetId = "1OlDQbwKWvho06BBtcMvfAlAElBesnjOS38SSYEcqh9Y";
-        final String range = "A2:E10";
+        final String range = "A1:B10";
         Sheets service = new Sheets.Builder(HTTP_TRANSPORT, JSON_FACTORY, getCredentials(HTTP_TRANSPORT))
                 .setApplicationName(APPLICATION_NAME)
                 .build();
+
+        List<List<Object>> valuesToBeWritten = Arrays.asList(
+                Arrays.asList(
+                        1, 2, 3
+                ),
+                Arrays.asList(
+                        "a", "b", "c"
+                )
+        );
+        ValueRange body = new ValueRange()
+                .setValues(valuesToBeWritten);
+        UpdateValuesResponse result =
+                service.spreadsheets().values().update(spreadsheetId, "A1:C10", body)
+                        .setValueInputOption("RAW")
+                        .execute();
+        System.out.printf("%d cells updated.", result.getUpdatedCells());
+
         ValueRange response = service.spreadsheets().values()
                 .get(spreadsheetId, range)
                 .execute();
@@ -78,10 +97,8 @@ public class Sheet {
         if (values == null || values.isEmpty()) {
             System.out.println("No data found.");
         } else {
-            System.out.println("Name, Major");
             for (List row : values) {
-                // Print columns A and E, which correspond to indices 0 and 4.
-                System.out.printf("%s, %s\n", row.get(0), row.get(4));
+                System.out.printf("%s, %s\n", row.get(0), row.get(1));
             }
         }
 
