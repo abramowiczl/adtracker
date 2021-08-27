@@ -3,6 +3,7 @@ package com.priv.adtracker.service;
 import com.priv.adtracker.model.Advertisment;
 import com.priv.adtracker.model.Url;
 import com.priv.adtracker.registry.AdvertismentsRegistry;
+import com.priv.adtracker.registry.Sheet;
 import lombok.extern.slf4j.Slf4j;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
@@ -13,6 +14,7 @@ import org.springframework.stereotype.Service;
 
 import javax.annotation.PostConstruct;
 import java.io.IOException;
+import java.security.GeneralSecurityException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -22,9 +24,8 @@ public class OtodomService {
 
     private final static String OTODOM_DOMAIN = "https://www.otodom.pl/";
 
-
     @PostConstruct
-    public List<Advertisment> getAdvertisments() throws IOException {
+    public List<Advertisment> getAdvertisments() throws IOException, GeneralSecurityException {
         log.info("Scanning {}", Url.OTODOM.toString());
         List<Advertisment> advertisments = new ArrayList<>();
         Document doc = Jsoup.connect(Url.OTODOM.getUrl()).get();
@@ -57,7 +58,7 @@ public class OtodomService {
     }
 
     @Scheduled(cron = "0 20,50 * * * *")
-    public List<Advertisment> run() throws IOException {
+    public List<Advertisment> run() throws IOException, GeneralSecurityException {
         return getAdvertisments();
     }
 }

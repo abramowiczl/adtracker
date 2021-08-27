@@ -4,7 +4,6 @@ import com.google.api.client.auth.oauth2.Credential;
 import com.google.api.client.extensions.java6.auth.oauth2.AuthorizationCodeInstalledApp;
 import com.google.api.client.extensions.jetty.auth.oauth2.LocalServerReceiver;
 import com.google.api.client.googleapis.auth.oauth2.GoogleAuthorizationCodeFlow;
-import com.google.api.client.googleapis.auth.oauth2.GoogleAuthorizationCodeRequestUrl;
 import com.google.api.client.googleapis.auth.oauth2.GoogleClientSecrets;
 import com.google.api.client.googleapis.javanet.GoogleNetHttpTransport;
 import com.google.api.client.http.javanet.NetHttpTransport;
@@ -13,22 +12,29 @@ import com.google.api.client.json.gson.GsonFactory;
 import com.google.api.client.util.store.FileDataStoreFactory;
 import com.google.api.services.sheets.v4.Sheets;
 import com.google.api.services.sheets.v4.SheetsScopes;
+import com.google.api.services.sheets.v4.model.AppendValuesResponse;
 import com.google.api.services.sheets.v4.model.UpdateValuesResponse;
 import com.google.api.services.sheets.v4.model.ValueRange;
+import com.priv.adtracker.model.Advertisment;
+import lombok.extern.slf4j.Slf4j;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.security.GeneralSecurityException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
+@Slf4j
 public class Sheet {
     private static final String APPLICATION_NAME = "Google Sheets API Java Quickstart";
     private static final JsonFactory JSON_FACTORY = GsonFactory.getDefaultInstance();
     private static final String TOKENS_DIRECTORY_PATH = "tokens";
+    private static final String SPREADSHEET_ID = "1OlDQbwKWvho06BBtcMvfAlAElBesnjOS38SSYEcqh9Y";
+
 
     /**
      * Global instance of the scopes required by this quickstart.
@@ -61,46 +67,62 @@ public class Sheet {
         return new AuthorizationCodeInstalledApp(flow, receiver).authorize("user");
     }
 
-    /**
-     * Prints the names and majors of students in a sample spreadsheet:
-     * https://docs.google.com/spreadsheets/d/1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms/edit
-     */
-    public static void main(String... args) throws IOException, GeneralSecurityException {
-        // Build a new authorized API client service.
-        final NetHttpTransport HTTP_TRANSPORT = GoogleNetHttpTransport.newTrustedTransport();
-        final String spreadsheetId = "1OlDQbwKWvho06BBtcMvfAlAElBesnjOS38SSYEcqh9Y";
-        final String range = "A1:B10";
+    public static List<String> getAdvertismentLinks() throws IOException {
+        NetHttpTransport HTTP_TRANSPORT = null;
+        try {
+            HTTP_TRANSPORT = GoogleNetHttpTransport.newTrustedTransport();
+        } catch (GeneralSecurityException e) {
+            log.error(e.toString());
+            return new ArrayList<>();
+        }
+        final String range = "A1:A999";
         Sheets service = new Sheets.Builder(HTTP_TRANSPORT, JSON_FACTORY, getCredentials(HTTP_TRANSPORT))
                 .setApplicationName(APPLICATION_NAME)
                 .build();
 
-        List<List<Object>> valuesToBeWritten = Arrays.asList(
-                Arrays.asList(
-                        1, 2, 3
-                ),
-                Arrays.asList(
-                        "a", "b", "c"
-                )
-        );
-        ValueRange body = new ValueRange()
-                .setValues(valuesToBeWritten);
-        UpdateValuesResponse result =
-                service.spreadsheets().values().update(spreadsheetId, "A1:C10", body)
-                        .setValueInputOption("RAW")
-                        .execute();
-        System.out.printf("%d cells updated.", result.getUpdatedCells());
-
-        ValueRange response = service.spreadsheets().values()
-                .get(spreadsheetId, range)
+        ValueRange sheetRangeData = service.spreadsheets().values()
+                .get(SPREADSHEET_ID, range)
                 .execute();
-        List<List<Object>> values = response.getValues();
+        List<List<Object>> values = sheetRangeData.getValues();
+        List<String> advertismentLinks = new ArrayList<>();
         if (values == null || values.isEmpty()) {
-            System.out.println("No data found.");
+            log.info("No data found.");
         } else {
             for (List row : values) {
-                System.out.printf("%s, %s\n", row.get(0), row.get(1));
+                advertismentLinks.add(row.get(1).toString());
             }
         }
+        log.info("Got {} advertisment links from Google sheet.", advertismentLinks.size());
+        return advertismentLinks;
+    }
 
+    public static void writeToSheet(List<Advertisment> advertisments) throws IOException {
+        NetHttpTransport HTTP_TRANSPORT = null;
+        try {
+            HTTP_TRANSPORT = GoogleNetHttpTransport.newTrustedTransport();
+        } catch (GeneralSecurityException e) {
+            log.error("Writing to sheet failed due to error: {}", e.toString());
+            return;
+        }
+        final String RANGE = "A1:Z999";
+        Sheets service = new Sheets.Builder(HTTP_TRANSPORT, JSON_FACTORY, getCredentials(HTTP_TRANSPORT))
+                .setApplicationName(APPLICATION_NAME)
+                .build();
+
+        List<List<Object>> valuesToBeWritten = new ArrayList<>();
+        advertisments.stream()
+                .forEach(
+                        advertisment ->
+                        valuesToBeWritten.add(advertisment.asList())
+                );
+
+        ValueRange body = new ValueRange()
+                .setValues(valuesToBeWritten);
+
+        AppendValuesResponse result =
+                service.spreadsheets().values().append(SPREADSHEET_ID, RANGE, body)
+                        .setValueInputOption("RAW")
+                        .execute();
+        log.info("{} cells updated.", result.getUpdates().getUpdatedCells());
     }
 }
