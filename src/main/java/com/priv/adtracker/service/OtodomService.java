@@ -26,7 +26,7 @@ public class OtodomService {
 
     @PostConstruct
     public List<Advertisment> getAdvertisments() throws IOException, GeneralSecurityException {
-        log.info("Scanning {}", Url.OTODOM.toString());
+        log.info("Scanning {}", Url.OTODOM);
         List<Advertisment> advertisments = new ArrayList<>();
         Document doc = Jsoup.connect(Url.OTODOM.getUrl()).get();
 
