@@ -75,7 +75,7 @@ public class Sheet {
             log.error(e.toString());
             return new ArrayList<>();
         }
-        final String range = "A1:A999";
+        final String range = "B1:B999";
         Sheets service = new Sheets.Builder(HTTP_TRANSPORT, JSON_FACTORY, getCredentials(HTTP_TRANSPORT))
                 .setApplicationName(APPLICATION_NAME)
                 .build();
@@ -89,7 +89,7 @@ public class Sheet {
             log.info("No data found.");
         } else {
             for (List row : values) {
-                advertismentLinks.add(row.get(1).toString());
+                advertismentLinks.add(row.get(0).toString());
             }
         }
         log.info("Got {} advertisment links from Google sheet.", advertismentLinks.size());
